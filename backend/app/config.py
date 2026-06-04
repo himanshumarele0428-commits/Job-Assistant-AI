@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     from_email: str = "noreply@jobassistant.ai"
     smtp_host: str = "smtp.sendgrid.net"
     smtp_port: int = 587
+    smtp_username: Optional[str] = None
+    smtp_password: Optional[str] = None
 
     # Storage
     storage_type: str = "local"

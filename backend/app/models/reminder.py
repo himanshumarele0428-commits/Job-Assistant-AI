@@ -22,6 +22,7 @@ class Reminder(Base):
     scheduled_at = Column(DateTime, nullable=False, index=True)
     is_sent = Column(Boolean, default=False)
     notification_type = Column(String(20), default="email")
+    recipient_email = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="reminders")

@@ -9,6 +9,7 @@ export interface Reminder {
   scheduled_at: string
   is_sent: boolean
   notification_type: string
+  recipient_email?: string
   created_at: string
 }
 

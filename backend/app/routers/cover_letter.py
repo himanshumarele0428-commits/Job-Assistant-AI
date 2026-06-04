@@ -76,7 +76,7 @@ async def get_letter(
 ):
     result = await db.execute(
         select(CoverLetter).where(
-            CoverLetter.id == letter_id, CoverLetter.user_id == current_user.id
+            CoverLetter.id == str(letter_id), CoverLetter.user_id == current_user.id
         )
     )
     letter = result.scalar_one_or_none()
@@ -93,7 +93,7 @@ async def download_pdf(
 ):
     result = await db.execute(
         select(CoverLetter).where(
-            CoverLetter.id == letter_id, CoverLetter.user_id == current_user.id
+            CoverLetter.id == str(letter_id), CoverLetter.user_id == current_user.id
         )
     )
     letter = result.scalar_one_or_none()
@@ -120,7 +120,7 @@ async def delete_letter(
 ):
     result = await db.execute(
         select(CoverLetter).where(
-            CoverLetter.id == letter_id, CoverLetter.user_id == current_user.id
+            CoverLetter.id == str(letter_id), CoverLetter.user_id == current_user.id
         )
     )
     letter = result.scalar_one_or_none()

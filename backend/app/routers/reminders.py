@@ -45,7 +45,7 @@ async def update_reminder(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Reminder).where(Reminder.id == reminder_id, Reminder.user_id == current_user.id)
+        select(Reminder).where(Reminder.id == str(reminder_id), Reminder.user_id == current_user.id)
     )
     reminder = result.scalar_one_or_none()
     if not reminder:
@@ -64,7 +64,7 @@ async def delete_reminder(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Reminder).where(Reminder.id == reminder_id, Reminder.user_id == current_user.id)
+        select(Reminder).where(Reminder.id == str(reminder_id), Reminder.user_id == current_user.id)
     )
     reminder = result.scalar_one_or_none()
     if not reminder:

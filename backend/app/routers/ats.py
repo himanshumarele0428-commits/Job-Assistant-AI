@@ -71,7 +71,7 @@ async def get_analysis(
 ):
     result = await db.execute(
         select(ATSAnalysis).where(
-            ATSAnalysis.id == analysis_id, ATSAnalysis.user_id == current_user.id
+            ATSAnalysis.id == str(analysis_id), ATSAnalysis.user_id == current_user.id
         )
     )
     analysis = result.scalar_one_or_none()

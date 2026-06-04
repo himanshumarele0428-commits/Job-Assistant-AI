@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func, case
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
@@ -8,6 +9,9 @@ from app.models.job import Job
 from app.models.user import User
 from app.schemas.job import JobCreateRequest, JobUpdateRequest, JobResponse, JobListResponse
 from app.middleware.auth import get_current_user
+
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -55,8 +59,13 @@ async def create_job(
 ):
     job = Job(user_id=current_user.id, **data.model_dump(exclude_none=True))
     db.add(job)
-    await db.commit()
-    await db.refresh(job)
+    try:
+        await db.commit()
+        await db.refresh(job)
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"Failed to create job: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save job. Please try again.")
     return job
 
 
@@ -67,7 +76,7 @@ async def get_job(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+        select(Job).where(Job.id == str(job_id), Job.user_id == current_user.id)
     )
     job = result.scalar_one_or_none()
     if not job:
@@ -83,15 +92,20 @@ async def update_job(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+        select(Job).where(Job.id == str(job_id), Job.user_id == current_user.id)
     )
     job = result.scalar_one_or_none()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     for key, value in data.model_dump(exclude_none=True).items():
         setattr(job, key, value)
-    await db.commit()
-    await db.refresh(job)
+    try:
+        await db.commit()
+        await db.refresh(job)
+    except SQLAlchemyError as e:
+        await db.rollback()
+        logger.error(f"Failed to update job {job_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save job. Please try again.")
     return job
 
 
@@ -102,7 +116,7 @@ async def delete_job(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Job).where(Job.id == job_id, Job.user_id == current_user.id)
+        select(Job).where(Job.id == str(job_id), Job.user_id == current_user.id)
     )
     job = result.scalar_one_or_none()
     if not job:

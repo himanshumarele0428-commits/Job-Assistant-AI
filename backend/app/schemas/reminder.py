@@ -8,6 +8,7 @@ class ReminderCreateRequest(BaseModel):
     reminder_type: str = Field(..., pattern="^(interview|follow-up|deadline)$")
     scheduled_at: datetime
     notification_type: str = Field(default="email", pattern="^(email|in-app)$")
+    recipient_email: Optional[str] = None
     job_id: Optional[str] = None
 
 
@@ -16,6 +17,7 @@ class ReminderUpdateRequest(BaseModel):
     reminder_type: Optional[str] = None
     scheduled_at: Optional[datetime] = None
     notification_type: Optional[str] = None
+    recipient_email: Optional[str] = None
 
 
 class ReminderResponse(BaseModel):
@@ -27,6 +29,7 @@ class ReminderResponse(BaseModel):
     scheduled_at: datetime
     is_sent: bool
     notification_type: str
+    recipient_email: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

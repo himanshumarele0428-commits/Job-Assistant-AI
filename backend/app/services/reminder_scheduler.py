@@ -1,14 +1,14 @@
+import logging
 from datetime import datetime, timedelta
-from app.tasks.celery_app import celery_app
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from sqlalchemy import select
 from app.database import async_session
 from app.models.reminder import Reminder
 from app.models.user import User
 from app.services.email_service import send_reminder_email
-from sqlalchemy import select
-import asyncio
-import logging
 
 logger = logging.getLogger(__name__)
+scheduler = AsyncIOScheduler()
 
 
 async def _check_and_send():
@@ -47,11 +47,11 @@ async def _check_and_send():
                         scheduled_at=str(reminder.scheduled_at),
                     )
                     if result["success"]:
-                        logger.info(f"Sent reminder email to {recipient} ({result['message']})")
+                        logger.info(f"Email sent to {recipient} ({result['message']})")
                         if "ethereal_user" in result:
-                            logger.info(f"View email at {result['preview_url']} — login: {result['ethereal_user']} / pass: {result['ethereal_pass']}")
+                            logger.info(f"View: {result['preview_url']} | Login: {result['ethereal_user']} | Pass: {result['ethereal_pass']}")
                     else:
-                        logger.warning(f"Failed to send email for reminder {reminder.id}: {result['message']}")
+                        logger.warning(f"Email failed for reminder {reminder.id}: {result['message']}")
                 else:
                     logger.warning(f"No recipient email for reminder {reminder.id}")
 
@@ -61,6 +61,13 @@ async def _check_and_send():
         logger.info(f"Processed {len(reminders)} reminder(s)")
 
 
-@celery_app.task(name="app.tasks.reminder_tasks.check_and_send_reminders")
-def check_and_send_reminders():
-    asyncio.run(_check_and_send())
+def start_scheduler():
+    scheduler.add_job(_check_and_send, "interval", seconds=60, id="check_reminders", replace_existing=True)
+    scheduler.start()
+    logger.info("Reminder scheduler started — checking every 60 seconds")
+
+
+def stop_scheduler():
+    if scheduler.running:
+        scheduler.shutdown(wait=False)
+        logger.info("Reminder scheduler stopped")

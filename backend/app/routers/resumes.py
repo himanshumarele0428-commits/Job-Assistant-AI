@@ -80,7 +80,7 @@ async def get_resume(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+        select(Resume).where(Resume.id == str(resume_id), Resume.user_id == current_user.id)
     )
     resume = result.scalar_one_or_none()
     if not resume:
@@ -95,7 +95,7 @@ async def download_resume(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+        select(Resume).where(Resume.id == str(resume_id), Resume.user_id == current_user.id)
     )
     resume = result.scalar_one_or_none()
     if not resume or not resume.file_path:
@@ -112,7 +112,7 @@ async def delete_resume(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Resume).where(Resume.id == resume_id, Resume.user_id == current_user.id)
+        select(Resume).where(Resume.id == str(resume_id), Resume.user_id == current_user.id)
     )
     resume = result.scalar_one_or_none()
     if not resume:

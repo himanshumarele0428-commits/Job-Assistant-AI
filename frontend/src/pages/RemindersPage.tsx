@@ -13,6 +13,7 @@ export default function RemindersPage() {
   const [form, setForm] = useState({
     title: '', reminder_type: 'follow-up', scheduled_at: '',
     notification_type: 'email' as 'email' | 'in-app',
+    recipient_email: '',
   })
 
   const fetchReminders = () => {
@@ -33,7 +34,7 @@ export default function RemindersPage() {
       }
       setShowForm(false)
       setEditing(null)
-      setForm({ title: '', reminder_type: 'follow-up', scheduled_at: '', notification_type: 'email' })
+      setForm({ title: '', reminder_type: 'follow-up', scheduled_at: '', notification_type: 'email', recipient_email: '' })
       fetchReminders()
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to save reminder')
@@ -47,6 +48,7 @@ export default function RemindersPage() {
       reminder_type: r.reminder_type,
       scheduled_at: r.scheduled_at.slice(0, 16),
       notification_type: r.notification_type as 'email' | 'in-app',
+      recipient_email: r.recipient_email || '',
     })
     setShowForm(true)
   }
@@ -66,7 +68,7 @@ export default function RemindersPage() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Reminders</h2>
           <p className="text-gray-500 dark:text-gray-400 mt-1">Stay on top of interviews and follow-ups</p>
         </div>
-        <button onClick={() => { setEditing(null); setForm({ title: '', reminder_type: 'follow-up', scheduled_at: '', notification_type: 'email' }); setShowForm(true) }} className="btn-primary flex items-center gap-2">
+        <button onClick={() => { setEditing(null); setForm({ title: '', reminder_type: 'follow-up', scheduled_at: '', notification_type: 'email', recipient_email: '' }); setShowForm(true) }} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Add Reminder
         </button>
       </div>
@@ -144,6 +146,19 @@ export default function RemindersPage() {
                     <option value="in-app">In-App</option>
                   </select>
                 </div>
+                {form.notification_type === 'email' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Recipient Email</label>
+                    <input
+                      type="email"
+                      value={form.recipient_email}
+                      onChange={e => setForm({ ...form, recipient_email: e.target.value })}
+                      className="input-field"
+                      placeholder="you@example.com"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Leave empty to use your account email</p>
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <button type="submit" className="btn-primary flex-1">{editing ? 'Update' : 'Create'}</button>
                   <button type="button" onClick={() => setShowForm(false)} className="btn-outline">Cancel</button>

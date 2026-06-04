@@ -23,8 +23,8 @@ class JobCreateRequest(BaseModel):
 
 
 class JobUpdateRequest(BaseModel):
-    title: Optional[str] = None
-    company: Optional[str] = None
+    title: Optional[str] = Field(None, min_length=1, max_length=255)
+    company: Optional[str] = Field(None, min_length=1, max_length=255)
     company_website: Optional[str] = None
     location: Optional[str] = None
     employment_type: Optional[str] = None
