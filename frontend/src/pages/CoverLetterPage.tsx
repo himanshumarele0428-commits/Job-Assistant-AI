@@ -41,9 +41,25 @@ export default function CoverLetterPage() {
   }
 
   const handleDownloadPdf = async (id: string) => {
-    const res = await coverLetterApi.downloadPdf(id)
-    const url = URL.createObjectURL(res.data)
-    const a = document.createElement('a'); a.href = url; a.download = `cover_letter.pdf`; a.click(); URL.revokeObjectURL(url)
+    try {
+      const response = await coverLetterApi.downloadPdf(id)
+      const blob = response.data instanceof Blob ? response.data : new Blob([response.data], { type: 'application/pdf' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'cover_letter.pdf'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (err: any) {
+      if (err.response?.data instanceof Blob) {
+        const text = await err.response.data.text()
+        try { const json = JSON.parse(text); setError(json.detail || 'Download failed') } catch { setError('Download failed') }
+      } else {
+        setError(err.response?.data?.detail || 'Download failed')
+      }
+    }
   }
 
   const handleDelete = async (id: string) => {

@@ -111,9 +111,23 @@ def send_reminder_email(recipient: str, reminder_title: str, reminder_type: str,
         ok = _send_via_smtp(settings.smtp_host, settings.smtp_port, settings.smtp_username, settings.smtp_password, message, settings.from_email)
         return {"success": ok, "message": "Sent via SMTP" if ok else "SMTP failed"}
 
+    from app.database import async_session
+    from app.models.user import User
+    import asyncio
+
     creds = _get_ethereal_creds()
     message["From"] = creds["email_address"]
+    message["To"] = creds["email_address"]
+
     ok = _send_via_smtp(creds["smtp_host"], creds["smtp_port"], creds["user"], creds["pass"], message, creds["email_address"])
+
+    logger.info(
+        f"Ethereal test email — check inbox at https://ethereal.email/login\n"
+        f"  Login: {creds['email_address']}\n"
+        f"  Password: {creds['pass']}\n"
+        f"  Original recipient was: {recipient}\n"
+        f"  TIP: Set SMTP_USERNAME/SMTP_PASSWORD in .env for real delivery (e.g. Gmail SMTP)"
+    )
 
     return {
         "success": ok,

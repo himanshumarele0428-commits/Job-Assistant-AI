@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import ReminderNotifier from './ReminderNotifier'
 import { useSelector } from 'react-redux'
 import { RootState } from '@/store'
 import clsx from 'clsx'
@@ -22,6 +23,7 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+      <ReminderNotifier />
     </div>
   )
 }

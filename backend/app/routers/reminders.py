@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
+from datetime import datetime, timezone
 from app.database import get_db
 from app.models.reminder import Reminder
 from app.models.user import User
@@ -26,15 +27,52 @@ async def create_reminder(
 
 @router.get("/", response_model=list[ReminderResponse])
 async def list_reminders(
+    due: bool = False,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if due:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        result = await db.execute(
+            select(Reminder).where(
+                Reminder.user_id == current_user.id,
+                Reminder.is_sent == False,
+                Reminder.scheduled_at <= now,
+                Reminder.notification_type == "in-app",
+            )
+        )
+        reminders = result.scalars().all()
+        for r in reminders:
+            r.is_sent = True
+        await db.commit()
+        return reminders
+
     result = await db.execute(
         select(Reminder)
         .where(Reminder.user_id == current_user.id)
         .order_by(Reminder.scheduled_at.asc())
     )
     return result.scalars().all()
+
+
+@router.put("/{reminder_id}/ack")
+async def ack_reminder(
+    reminder_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Reminder).where(
+            Reminder.id == str(reminder_id),
+            Reminder.user_id == current_user.id,
+        )
+    )
+    reminder = result.scalar_one_or_none()
+    if not reminder:
+        raise HTTPException(status_code=404, detail="Reminder not found")
+    reminder.is_sent = True
+    await db.commit()
+    return {"status": "acknowledged"}
 
 
 @router.put("/{reminder_id}", response_model=ReminderResponse)

@@ -1,7 +1,9 @@
 import os
+import io
 import uuid
+import html
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -13,7 +15,7 @@ from app.middleware.auth import get_current_user
 from app.services.cover_letter_service import generate_cover_letter
 from app.config import get_settings
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
 
 settings = get_settings()
@@ -96,20 +98,31 @@ async def download_pdf(
             CoverLetter.id == str(letter_id), CoverLetter.user_id == current_user.id
         )
     )
-    letter = result.scalar_one_or_none()
-    if not letter or not letter.content:
+    cover_letter = result.scalar_one_or_none()
+    if not cover_letter or not cover_letter.content:
         raise HTTPException(status_code=404, detail="Cover letter not found")
 
-    upload_dir = os.path.join(settings.local_storage_path, str(current_user.id), "cover_letters")
-    os.makedirs(upload_dir, exist_ok=True)
-    pdf_path = os.path.join(upload_dir, f"{letter_id}.pdf")
-
-    doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=letter, topMargin=50, bottomMargin=50)
     styles = getSampleStyleSheet()
-    paragraphs = [Paragraph(p.replace("\n", "<br/>"), styles["Normal"]) for p in letter.content.split("\n\n") if p.strip()]
-    doc.build(paragraphs)
 
-    return FileResponse(pdf_path, media_type="application/pdf", filename=f"cover_letter_{letter.company_name}.pdf")
+    paragraphs = []
+    for p in cover_letter.content.split("\n"):
+        escaped = html.escape(p.strip())
+        if escaped:
+            paragraphs.append(Paragraph(escaped, styles["Normal"]))
+        else:
+            paragraphs.append(Spacer(1, 6))
+
+    doc.build(paragraphs)
+    buf.seek(0)
+
+    safe_company = cover_letter.company_name.replace(" ", "_").replace("/", "_")[:30]
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=cover_letter_{safe_company}.pdf"},
+    )
 
 
 @router.delete("/{letter_id}", status_code=204)

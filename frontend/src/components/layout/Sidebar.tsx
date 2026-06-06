@@ -1,12 +1,13 @@
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import {
   LayoutDashboard, Briefcase, FileText, LineChart, FileCheck,
-  PenLine, Bell, Search, History, BarChart3, Settings, ChevronLeft, ChevronRight
+  PenLine, Bell, Search, History, BarChart3, Settings, ChevronLeft, ChevronRight, LogOut
 } from 'lucide-react'
 import { useSelector, useDispatch } from 'react-redux'
 import { RootState } from '@/store'
 import { toggleSidebar } from '@/store/uiSlice'
+import { logout } from '@/store/authSlice'
 import clsx from 'clsx'
 
 const links = [
@@ -23,9 +24,15 @@ const links = [
 
 export default function Sidebar() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { sidebarOpen } = useSelector((s: RootState) => s.ui)
   const { user } = useSelector((s: RootState) => s.auth)
   const location = useLocation()
+
+  const handleLogout = () => {
+    dispatch(logout())
+    navigate('/login')
+  }
 
   if (!sidebarOpen) {
     return (
@@ -88,7 +95,7 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+      <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
         <NavLink
           to="/admin"
           className={({ isActive }) =>
@@ -103,6 +110,13 @@ export default function Sidebar() {
           <Settings size={18} />
           Settings
         </NavLink>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
+        >
+          <LogOut size={18} />
+          Sign Out
+        </button>
       </div>
 
       <button

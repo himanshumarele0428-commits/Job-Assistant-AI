@@ -42,13 +42,16 @@ AI-powered Job Application Tracking and Career Assistant platform. Track applica
 
 ### ⏰ Reminders
 - Interview, follow-up, and deadline reminders
-- Email and in-app notification support
-- Celery + Redis scheduled task processing
+- **No-credentials in-app notifications** — browser notifications, audio chime, and animated toast alerts with zero SMTP setup
+- Email support via SMTP (Gmail with App Password, SendGrid) or Ethereal test service
+- APScheduler-based processing (runs in-process, no Celery/Redis needed)
 
 ###  Reports & History
 - Application timeline by month
 - Conversion rate analytics
-- Export ready
+- **Export to CSV** (downloadable spreadsheet with Title, Company, Status, Location, Skills)
+- **Export to PDF** (styled report with header table via ReportLab)
+- Delete reminders (sent and unsent) from the Reminders page
 
 ###  Admin Panel
 - User management
@@ -95,10 +98,21 @@ npm install
 
 Edit `.env` and configure at minimum:
 ```env
-DATABASE_URL=sqlite+aiosqlite:///./job_assistant.db   # For dev
+DATABASE_URL=sqlite+aiosqlite:///./job_assistant.db   # For dev (default)
 SECRET_KEY=your-secret-key
 GROQ_API_KEY=gsk_your_key_here                         # Required for AI features
+
+# Optional — for real email delivery (Gmail SMTP):
+# 1. Enable 2FA on Gmail: https://myaccount.google.com/security
+# 2. Create App Password: https://myaccount.google.com/apppasswords
+# 3. Uncomment and fill below:
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USERNAME=your-email@gmail.com
+# SMTP_PASSWORD=your-16-char-app-password
 ```
+
+**Note**: Email credentials are optional. Set reminders to "In-App" notification type for zero-config desktop alerts.
 
 **3. Start the servers**
 
@@ -177,12 +191,21 @@ This starts PostgreSQL, Redis, backend, Celery worker, Celery beat, and frontend
 | GET | `/api/dashboard/charts/companies` | Company breakdown |
 | GET | `/api/dashboard/charts/ats-trend` | ATS score trend |
 
+### Reports
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/reports/monthly` | Monthly application report |
+| GET | `/api/reports/export/csv` | Download jobs as CSV |
+| GET | `/api/reports/export/pdf` | Download jobs as styled PDF |
+
 ### Reminders
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/api/reminders/` | List reminders |
+| GET | `/api/reminders/?due=true` | Get due in-app reminders (marks as sent) |
 | POST | `/api/reminders/` | Create reminder |
 | PUT | `/api/reminders/{id}` | Update reminder |
+| PUT | `/api/reminders/{id}/ack` | Acknowledge/dismiss a reminder |
 | DELETE | `/api/reminders/{id}` | Delete reminder |
 
 ### Admin
@@ -199,30 +222,34 @@ This starts PostgreSQL, Redis, backend, Celery worker, Celery beat, and frontend
 Project30_JobAssistantAI/
 ├── docker-compose.yml
 ├── .env.example
+├── .env                          # Environment config
+├── start_backend.bat             # Windows quick-launch scripts
+├── start_frontend.bat
 ├── backend/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── app/
-│       ├── main.py              # FastAPI entry point
-│       ├── config.py            # Settings (pydantic-settings)
-│       ├── database.py          # SQLAlchemy engine + session
-│       ├── models/              # ORM models
-│       ├── schemas/             # Pydantic request/response schemas
-│       ├── routers/             # API route handlers
-│       ├── services/            # Business logic + AI integrations
-│       ├── middleware/          # JWT auth middleware
-│       └── tasks/               # Celery tasks + scheduler
+│       ├── main.py               # FastAPI entry point
+│       ├── config.py             # Settings (pydantic-settings)
+│       ├── database.py           # SQLAlchemy engine + session
+│       ├── models/               # ORM models (Job, Resume, CoverLetter, Reminder, etc.)
+│       ├── schemas/              # Pydantic request/response schemas
+│       ├── routers/              # API route handlers (auth, jobs, resumes, ats, cover_letter, reminders, reports, etc.)
+│       ├── services/             # Business logic (AI generation, email_service, reminder_scheduler)
+│       ├── middleware/           # JWT auth middleware
+│       └── tasks/                # Celery tasks (optional)
 ├── frontend/
 │   ├── Dockerfile
 │   ├── nginx.conf
 │   └── src/
-│       ├── api/                 # Axios API client + endpoint modules
-│       ├── store/               # Redux Toolkit slices
-│       ├── components/          # Layout + reusable UI components
-│       ├── pages/               # Page components
-│       ├── router/              # React Router + protected routes
-│       └── styles/              # Tailwind + custom CSS
-└── prompt.md                    # PRD document
+│       ├── api/                  # Axios API client + endpoint modules
+│       ├── store/                # Redux Toolkit slices (auth, ui)
+│       ├── components/
+│       │   └── layout/           # Sidebar, Header, DashboardLayout, ReminderNotifier
+│       ├── pages/                # Page components (Dashboard, Jobs, Reminders, Reports, etc.)
+│       ├── router/               # React Router + ProtectedRoute
+│       └── styles/               # Tailwind + custom CSS
+└── prompt.md                     # PRD document
 ```
 
 ---
@@ -231,11 +258,15 @@ Project30_JobAssistantAI/
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | `sqlite+aiosqlite:///...` | Database connection URL |
+| `DATABASE_URL` | No | `sqlite+aiosqlite:///...` | Database connection URL |
 | `SECRET_KEY` | Yes | — | JWT signing secret |
 | `GROQ_API_KEY` | For AI features | — | Groq API key for ATS/Cover Letter |
-| `REDIS_URL` | For reminders | — | Redis broker for Celery |
-| `SENDGRID_API_KEY` | For email | — | SendGrid API key |
+| `SMTP_HOST` | For email | `smtp.gmail.com` | SMTP server hostname |
+| `SMTP_PORT` | For email | `587` | SMTP port (TLS) |
+| `SMTP_USERNAME` | For email | — | SMTP login (Gmail address) |
+| `SMTP_PASSWORD` | For email | — | SMTP password (Gmail App Password) |
+| `SENDGRID_API_KEY` | For email | — | SendGrid API key (alternative) |
+| `REDIS_URL` | No longer required | — | Reminders use in-process scheduler |
 | `STORAGE_TYPE` | No | `local` | File storage: `local` or `s3` |
 
 ---

@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from sqlalchemy import select
 from app.database import async_session
@@ -10,16 +10,18 @@ from app.services.email_service import send_reminder_email
 logger = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
 
+_ethereal_creds_logged = False
+
 
 async def _check_and_send():
+    global _ethereal_creds_logged
+
     async with async_session() as db:
         now = datetime.utcnow()
-        window = now + timedelta(minutes=1)
         result = await db.execute(
             select(Reminder).where(
                 Reminder.is_sent == False,
-                Reminder.scheduled_at >= now,
-                Reminder.scheduled_at <= window,
+                Reminder.scheduled_at <= now,
             )
         )
         reminders = result.scalars().all()
@@ -49,7 +51,7 @@ async def _check_and_send():
                     if result["success"]:
                         logger.info(f"Email sent to {recipient} ({result['message']})")
                         if "ethereal_user" in result:
-                            logger.info(f"View: {result['preview_url']} | Login: {result['ethereal_user']} | Pass: {result['ethereal_pass']}")
+                            logger.info(f"Check inbox: {result['preview_url']} | Login: {result['ethereal_user']} | Pass: {result['ethereal_pass']}")
                     else:
                         logger.warning(f"Email failed for reminder {reminder.id}: {result['message']}")
                 else:

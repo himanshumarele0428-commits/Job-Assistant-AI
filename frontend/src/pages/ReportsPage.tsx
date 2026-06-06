@@ -8,6 +8,7 @@ export default function ReportsPage() {
   const [data, setData] = useState<any>(null)
   const [stats, setStats] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
+  const [exporting, setExporting] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -18,6 +19,23 @@ export default function ReportsPage() {
       setStats(s.data)
     }).finally(() => setLoading(false))
   }, [])
+
+  const handleExport = async (format: 'csv' | 'pdf') => {
+    setExporting(format)
+    try {
+      const response = await client.get(`/reports/export/${format}`, { responseType: 'blob' })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const link = document.createElement('a')
+      link.href = url
+      link.download = format === 'csv' ? 'job_applications.csv' : 'job_applications_report.pdf'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } finally {
+      setExporting(null)
+    }
+  }
 
   if (loading) return <div className="page-container flex justify-center py-20"><div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full" /></div>
 
@@ -72,8 +90,12 @@ export default function ReportsPage() {
       </div>
 
       <div className="flex gap-3 mt-4">
-        <button className="btn-outline flex items-center gap-2 text-sm"><Download size={14} /> Export CSV</button>
-        <button className="btn-outline flex items-center gap-2 text-sm"><Download size={14} /> Export PDF</button>
+        <button onClick={() => handleExport('csv')} disabled={exporting === 'csv'} className="btn-outline flex items-center gap-2 text-sm">
+          <Download size={14} /> {exporting === 'csv' ? 'Exporting...' : 'Export CSV'}
+        </button>
+        <button onClick={() => handleExport('pdf')} disabled={exporting === 'pdf'} className="btn-outline flex items-center gap-2 text-sm">
+          <Download size={14} /> {exporting === 'pdf' ? 'Exporting...' : 'Export PDF'}
+        </button>
       </div>
     </div>
   )

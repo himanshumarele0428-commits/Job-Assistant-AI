@@ -27,10 +27,12 @@ export default function RemindersPage() {
     e.preventDefault()
     setError('')
     try {
+      const utcScheduled = new Date(form.scheduled_at).toISOString()
+      const payload = { ...form, scheduled_at: utcScheduled }
       if (editing) {
-        await remindersApi.update(editing.id, form)
+        await remindersApi.update(editing.id, payload)
       } else {
-        await remindersApi.create(form)
+        await remindersApi.create(payload)
       }
       setShowForm(false)
       setEditing(null)
@@ -42,11 +44,14 @@ export default function RemindersPage() {
   }
 
   const handleEdit = (r: Reminder) => {
+    const d = new Date(r.scheduled_at)
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const localStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
     setEditing(r)
     setForm({
       title: r.title,
       reminder_type: r.reminder_type,
-      scheduled_at: r.scheduled_at.slice(0, 16),
+      scheduled_at: localStr,
       notification_type: r.notification_type as 'email' | 'in-app',
       recipient_email: r.recipient_email || '',
     })
@@ -92,12 +97,12 @@ export default function RemindersPage() {
                       </span>
                     </div>
                   </div>
-                  {!r.is_sent && (
-                    <div className="flex gap-1">
+                  <div className="flex gap-1">
+                    {!r.is_sent && (
                       <button onClick={() => handleEdit(r)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"><Edit3 size={14} /></button>
-                      <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400"><Trash2 size={14} /></button>
-                    </div>
-                  )}
+                    )}
+                    <button onClick={() => handleDelete(r.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-400"><Trash2 size={14} /></button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-gray-400">
                   <span className="flex items-center gap-1"><Calendar size={12} /> {format(new Date(r.scheduled_at), 'MMM d, yyyy')}</span>
